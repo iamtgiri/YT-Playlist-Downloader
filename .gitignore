@@ -9,5 +9,5 @@ venv/
 build/
 dist/
 *.egg-info/
-ffmpeg/
 YT-Playlist-Downloader.spec
+app/__pycache__/

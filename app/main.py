@@ -165,6 +165,7 @@ class DownloadWorker(QRunnable):
 class YouTubeDownloaderApp(QMainWindow):
     def __init__(self):
         super().__init__()
+        # self.setWindowTitle("YT Playlist Downloader")
         QApplication.setFont(QFont("Arial", 14))
         self.signals = SignalHandler()
         self.playlist_items = []    # entries with at least {title, url/id}
@@ -179,7 +180,7 @@ class YouTubeDownloaderApp(QMainWindow):
 
     # ---------- UI ----------
     def init_ui(self):
-        self.setWindowTitle("YouTube Playlist/Video Downloader")
+        self.setWindowTitle("YT Playlist Downloader")
         self.setGeometry(350, 30, 1300, 1000)
         self.setStyleSheet("background-color: #2E3440; color: #D8DEE9;")
 
@@ -651,7 +652,7 @@ class YouTubeDownloaderApp(QMainWindow):
 def main():
     import sys
     from PyQt5.QtWidgets import QApplication
-    from .main import YouTubeDownloaderApp  # adjust if your class is elsewhere
+    from app.main import YouTubeDownloaderApp  # adjust if your class is elsewhere
 
     app = QApplication(sys.argv)
     window = YouTubeDownloaderApp()
