@@ -11,7 +11,7 @@ This project bundles **FFmpeg** internally, so you don’t need to install Pytho
 
 youtube-downloader-gui/
 ├── app/
-│   ├── **init**.py
+│   ├── __init__.py
 │   └── main.py         # main application code
 ├── requirements.txt     # dependencies for running from source
 ├── README.md            # this file
