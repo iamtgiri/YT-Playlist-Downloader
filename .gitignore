@@ -11,3 +11,4 @@ dist/
 *.egg-info/
 YT-Playlist-Downloader.spec
 app/__pycache__/
+temp_files/
