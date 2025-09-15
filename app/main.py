@@ -7,7 +7,7 @@ from datetime import datetime
 
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QComboBox, QPushButton,
-    QProgressBar, QTextEdit, QFileDialog, QMessageBox, QListWidget, QListWidgetItem, QSpinBox, QSystemTrayIcon
+    QProgressBar, QTextEdit, QFileDialog, QMessageBox, QListWidget, QListWidgetItem, QSpinBox, QSystemTrayIcon, QCheckBox
 )
 from PyQt5.QtGui import QFont, QIcon, QColor    
 from PyQt5.QtCore import Qt, pyqtSignal, QObject, QRunnable, QThreadPool, pyqtSlot
@@ -401,17 +401,16 @@ class YouTubeDownloaderApp(QMainWindow):
         key = self.key_for_entry(entry)
 
         item = QListWidgetItem()
-        # make it checkable
-        item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-        item.setCheckState(Qt.Checked)
 
         # container widget
         container = QWidget()
         h = QHBoxLayout(container)
         h.setContentsMargins(6, 4, 6, 4)
 
-        label = QLabel(f"{idx}. {title}")
-        label.setStyleSheet("color: #ECEFF4;")
+        checkbox = QCheckBox(f"{idx}. {title}")
+        checkbox.setChecked(True)
+        checkbox.setStyleSheet("color: #ECEFF4;")
+
         bar = QProgressBar()
         bar.setMinimum(0)
         bar.setMaximum(100)
@@ -421,12 +420,18 @@ class YouTubeDownloaderApp(QMainWindow):
             "QProgressBar::chunk { background-color: #88C0D0; border-radius: 4px; }"
         )
 
-        h.addWidget(label, stretch=5)
+        h.addWidget(checkbox, stretch=5)
         h.addWidget(bar, stretch=2)
 
         self.video_list.addItem(item)
         self.video_list.setItemWidget(item, container)
-        self.item_widgets[key] = {"item": item, "bar": bar, "label": label, "entry": entry}
+        self.item_widgets[key] = {
+            "item": item,
+            "bar": bar,
+            "checkbox": checkbox,
+            "entry": entry
+        }
+
 
     def visible_text(self, item):
         w = self.video_list.itemWidget(item)
@@ -516,32 +521,22 @@ class YouTubeDownloaderApp(QMainWindow):
             item.setHidden(text not in s)
 
     def toggle_select_all(self):
-        all_checked = True
-        for i in range(self.video_list.count()):
-            if self.video_list.item(i).checkState() != Qt.Checked:
-                all_checked = False
-                break
-        new_state = Qt.Unchecked if all_checked else Qt.Checked
-        for i in range(self.video_list.count()):
-            self.video_list.item(i).setCheckState(new_state)
+        all_checked = all(meta["checkbox"].isChecked() for meta in self.item_widgets.values())
+        new_state = not all_checked
+        for meta in self.item_widgets.values():
+            meta["checkbox"].setChecked(new_state)
+
 
     def gather_selected_urls(self):
         selected = []
-        for i in range(self.video_list.count()):
-            item = self.video_list.item(i)
-            if item.checkState() == Qt.Checked:
-                w = self.video_list.itemWidget(item)
-                # recover the key from mapping by matching the widget pointer
-                # quicker: iterate item_widgets
-                pass
-        # Reliable: iterate mapping instead
         for key, meta in self.item_widgets.items():
-            if meta["item"].checkState() == Qt.Checked:
+            if meta["checkbox"].isChecked():
                 entry = meta["entry"]
                 url = entry.get("webpage_url") or entry.get("url")
                 if url:
                     selected.append((key, url))
         return selected
+
 
     def download_selected_videos(self):
         folder = self.folder_path.text().strip()
@@ -652,7 +647,7 @@ class YouTubeDownloaderApp(QMainWindow):
 def main():
     import sys
     from PyQt5.QtWidgets import QApplication
-    from app.main import YouTubeDownloaderApp  # adjust if your class is elsewhere
+    # from app.main import YouTubeDownloaderApp  # adjust if your class is elsewhere
 
     app = QApplication(sys.argv)
     window = YouTubeDownloaderApp()
