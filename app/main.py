@@ -14,6 +14,8 @@ from PyQt5.QtCore import Qt, pyqtSignal, QObject, QRunnable, QThreadPool, pyqtSl
 
 import yt_dlp
 from yt_dlp.utils import DownloadError, ExtractorError, GeoRestrictedError, UnsupportedError
+from yt_dlp import YoutubeDL
+from yt_dlp_gemini_tagger import GeminiID3PostProcessor
 
 ffmpeg_dir = os.path.join(os.path.dirname(__file__), "..", "ffmpeg")
 ydl_opts = {
@@ -111,7 +113,8 @@ class DownloadWorker(QRunnable):
                     'preferredquality': '192'
                 },
                 {'key': 'FFmpegMetadata'},
-                {'key': 'EmbedThumbnail'}
+                {'key': 'EmbedThumbnail'},
+                # GeminiID3PostProcessor()
             ]
 
         start_ts = datetime.now().isoformat()
@@ -120,6 +123,8 @@ class DownloadWorker(QRunnable):
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                if quality == "only_mp3":
+                    ydl.add_post_processor(GeminiID3PostProcessor(ydl))
                 ydl.download([url])
             ok = True
         except GeoRestrictedError:
@@ -446,7 +451,10 @@ class YouTubeDownloaderApp(QMainWindow):
         if folder:
             self.folder_path.setText(folder)
             self.history_path = os.path.join(folder, "download_history.jsonl")
-
+            if not os.path.exists(self.history_path):
+                with open(self.history_path, "w", encoding="utf-8") as f:
+                    pass
+                
     def fetch_info(self):
         url = self.url_entry.text().strip()
         if not url:
