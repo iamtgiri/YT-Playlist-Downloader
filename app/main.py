@@ -88,8 +88,14 @@ class DownloadWorker(QRunnable):
 
         outtmpl = tmpl.strip() if tmpl.strip() else '%(title).200s.%(ext)s'
 
+        # SABR-safe fallback format
+        sabr_safe_format = "bv*[protocol^=http]+ba*[protocol^=http]/best"
+
+        # Use your format_map if present, otherwise fallback to SABR-safe
+        selected_format = format_map.get(quality, sabr_safe_format)
+
         ydl_opts = {
-            'format': format_map.get(quality, "best"),
+            'format': selected_format,
             'paths': {'home': folder},
             'outtmpl': outtmpl,
             'windowsfilenames': True,
@@ -102,7 +108,9 @@ class DownloadWorker(QRunnable):
             'updatetime': False,
             'writethumbnail': quality == "only_mp3",
             'postprocessor_args': [],
+            'cookies_from_browser': ('chrome',),
         }
+
 
         # MP3 post-processing with metadata + thumbnail embedding
         if quality == "only_mp3":
@@ -402,6 +410,9 @@ class YouTubeDownloaderApp(QMainWindow):
         """
         Create a QWidget per list item: [checkbox label] [progressbar]
         """
+
+        entry["_original_index"] = idx 
+
         title = entry.get("title", f"Video {idx}")
         key = self.key_for_entry(entry)
 
@@ -462,7 +473,15 @@ class YouTubeDownloaderApp(QMainWindow):
             return
 
         self.append_status("Fetching information…", "info")
-        ydl_opts = {'extract_flat': True, 'quiet': True}
+        # ydl_opts = {'extract_flat': True, 'quiet': True}
+        ydl_opts = {
+            'extract_flat': True,
+            'quiet': True,
+            # 'cookies': r"E:\myWorkPlace\PROJECTS\youtube-downloader\temp_files\yt-cookies.txt",
+            # 'cookiesfrombrowser': ('chrome',),  # or use 'cookies': r"C:\path\to\cookies.txt"
+            'cookies_from_browser': ('chrome',),
+        }
+
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=False)
@@ -578,19 +597,29 @@ class YouTubeDownloaderApp(QMainWindow):
 
         # launch one worker per selected url
         for key, url in sel:
-            # reset per-item progress bar
-            if key in self.item_widgets:
-                self.item_widgets[key]["bar"].setValue(0)
+            meta = self.item_widgets.get(key)
+            entry = meta["entry"] if meta else {}
+            orig_index = entry.get("_original_index", 0)
+            zindex = str(orig_index).zfill(3)   # fixed 3 digits
+            per_tmpl = f"{zindex} - %(title).200s.%(ext)s"
+
+            # reset per-item progress if available
+            if meta:
+                meta["bar"].setValue(0)
+
             worker = DownloadWorker(
                 url=url,
                 key=key,
                 folder=folder,
                 quality=quality,
-                tmpl=tmpl,
+                tmpl=per_tmpl,
                 signals=self.signals,
                 flags=self.flags
             )
             self.threadpool.start(worker)
+
+
+
 
     def pause_downloads(self):
         self.flags["pause"] = True

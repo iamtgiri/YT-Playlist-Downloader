@@ -14,7 +14,7 @@ from mutagen.id3 import (
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
 from yt_dlp.postprocessor.common import PostProcessor
@@ -25,31 +25,35 @@ google_api_key = os.getenv("GOOGLE_API_KEY")
 
 # --- Define structured metadata model ---
 class MP3Tags(BaseModel):
+    """
+    Data model representing standard and extended ID3 tags for an audio file.
+    All fields are Optional and provide sensible defaults or detailed descriptions.
+    """
     # Core
-    title: Optional[str] = None
-    artist: Optional[str] = None
-    album: Optional[str] = None
-    track: Optional[str] = None   # e.g. "5/12"
-    disc: Optional[str] = None    # e.g. "1/2"
-    year: Optional[str] = None
-    genre: Optional[str] = None
-    composer: Optional[str] = None
-    publisher: Optional[str] = None
-    lyrics: Optional[str] = None
-    comments: Optional[str] = None
+    title: str = Field(..., description="Cleaned title of the song/audio track. Mandatory field.")
+    artist: Optional[str] = Field("Unknown", description="Name of the singer, artist, band, or channel.")
+    album: Optional[str] = Field("Unknown", description="Name of the album, series, or movie the track belongs to.")
+    track: Optional[str] = Field(None, description="Track number and total tracks (e.g., '5/12').")
+    disc: Optional[str] = Field(None, description="Disc number and total discs (e.g., '1/2').")
+    year: Optional[str] = Field("Unknown", description="Publishing year of the song/audio track (YYYY).")
+    genre: Optional[str] = Field("Unknown", description="Genre of the song (e.g., 'Rock', 'Classical', 'Podcast').")
+    composer: Optional[str] = Field("Unknown", description="Composer of the song or musical work.")
+    publisher: Optional[str] = Field("Unknown", description="Publisher or record label of the song.")
+    lyrics: Optional[str] = Field("Unknown", description="Full lyrics of the song.")
+    comments: Optional[str] = Field("Unknown", description="General comments, notes, or description.")
 
     # Extended
-    album_artist: Optional[str] = None
-    bpm: Optional[str] = None
-    key: Optional[str] = None
-    isrc: Optional[str] = None
-    encoder: Optional[str] = None
-    original_date: Optional[str] = None
-    copyright: Optional[str] = None
-    website: Optional[str] = None
-    rating: Optional[str] = None
-    subtitle: Optional[str] = None  # podcast / show
-    cover_url: Optional[str] = None
+    album_artist: Optional[str] = Field("Unknown", description="The primary artist for the entire album.")
+    bpm: Optional[str] = Field("Unknown", description="Beats per minute.")
+    key: Optional[str] = Field(None, description="Musical key of the song (e.g., 'C minor' or 'F# Maj').")
+    isrc: Optional[str] = Field(None, description="International Standard Recording Code (a unique identifier for recordings).")
+    encoder: Optional[str] = Field(None, description="Software or hardware used to encode the file (e.g., 'LAME 3.99').")
+    original_date: Optional[str] = Field(None, description="Original release date, if different from the year field (e.g., '1970-01-01').")
+    copyright: Optional[str] = Field(None, description="Copyright statement or legal notice.")
+    website: Optional[str] = Field(None, description="Official website URL related to the song or artist.")
+    rating: Optional[str] = Field(None, description="User or editorial rating, typically a numerical value (e.g., '5' out of 5).")
+    subtitle: Optional[str] = Field(None, description="Secondary title, often used in podcasts or classical music.")
+    cover_url: Optional[str] = Field(None, description="URL pointing to the album artwork or cover image.")
 
 
 # --- Gemini setup ---
@@ -57,25 +61,24 @@ model = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash-lite",
     temperature=0.5,
     max_output_tokens=1024,
-    google_api_key=google_api_key,
+    google_api_key=google_api_key
 )
 parser = PydanticOutputParser(pydantic_object=MP3Tags)
 
 prompt = PromptTemplate(
     template="""
-Given the raw MP3 metadata, return a cleaned JSON.
-- All fields must exist.
-- If unknown, use "" (empty string) instead of null.
-- "title" must never be empty; if unavailable, use the filename without extension.
+Given the following MP3 filename, extract structured metadata tags suitable for a music song/audio story.
+The filename may contain extra information like channel name, album name, upload date or extraneous symbols.
+Focus on extracting clean and relevant tags only. 
 
-Raw metadata:
-{metadata}
+Filename: {filename}
 
 {format_instructions}
 """,
-    input_variables=["metadata"],
+    input_variables=["filename"],
     partial_variables={"format_instructions": parser.get_format_instructions()},
 )
+
 
 chain = prompt | model | parser
 
@@ -93,38 +96,42 @@ def tag_mp3(file_path: str, tags: MP3Tags):
             del audio.tags[key]
         audio.tags.add(frame)
 
+    # Only set if meaningful (not None/Unknown/empty)
+    def valid(val: Optional[str]):
+        return val and val.strip() and val.strip().lower() != "unknown"
+    
     # Core
-    if tags.title: set_tag("TIT2", TIT2(encoding=3, text=tags.title))
-    if tags.artist: set_tag("TPE1", TPE1(encoding=3, text=tags.artist))
-    if tags.album: set_tag("TALB", TALB(encoding=3, text=tags.album))
-    if tags.track: set_tag("TRCK", TRCK(encoding=3, text=tags.track))
-    if tags.disc: set_tag("TPOS", TPOS(encoding=3, text=tags.disc))
-    if tags.year: set_tag("TDRC", TDRC(encoding=3, text=tags.year))
-    if tags.genre: set_tag("TCON", TCON(encoding=3, text=tags.genre))
-    if tags.composer: set_tag("TCOM", TCOM(encoding=3, text=tags.composer))
-    if tags.publisher: set_tag("TPUB", TPUB(encoding=3, text=tags.publisher))
-    if tags.lyrics: set_tag("USLT", USLT(encoding=3, lang="eng", desc="", text=tags.lyrics))
-    if tags.comments: set_tag("COMM", COMM(encoding=3, desc="desc", text=tags.comments))
+    if valid(tags.title): set_tag("TIT2", TIT2(encoding=3, text=tags.title))
+    if valid(tags.artist): set_tag("TPE1", TPE1(encoding=3, text=tags.artist))
+    if valid(tags.album): set_tag("TALB", TALB(encoding=3, text=tags.album))
+    if valid(tags.track): set_tag("TRCK", TRCK(encoding=3, text=tags.track))
+    if valid(tags.disc): set_tag("TPOS", TPOS(encoding=3, text=tags.disc))
+    if valid(tags.year): set_tag("TDRC", TDRC(encoding=3, text=tags.year))
+    if valid(tags.genre): set_tag("TCON", TCON(encoding=3, text=tags.genre))
+    if valid(tags.composer): set_tag("TCOM", TCOM(encoding=3, text=tags.composer))
+    if valid(tags.publisher): set_tag("TPUB", TPUB(encoding=3, text=tags.publisher))
+    if valid(tags.lyrics): set_tag("USLT", USLT(encoding=3, lang="eng", desc="", text=tags.lyrics))
+    if valid(tags.comments): set_tag("COMM", COMM(encoding=3, desc="desc", text=tags.comments))
 
     # Extended
-    if tags.album_artist: set_tag("TPE2", TPE2(encoding=3, text=tags.album_artist))
-    if tags.bpm: set_tag("TBPM", TBPM(encoding=3, text=tags.bpm))
-    if tags.key: set_tag("TKEY", TKEY(encoding=3, text=tags.key))
-    if tags.isrc: set_tag("TSRC", TSRC(encoding=3, text=tags.isrc))
-    if tags.encoder: set_tag("TSSE", TSSE(encoding=3, text=tags.encoder))
-    if tags.original_date: set_tag("TDOR", TDOR(encoding=3, text=tags.original_date))
-    if tags.copyright: set_tag("TCOP", TCOP(encoding=3, text=tags.copyright))
-    if tags.website: set_tag("WXXX", WXXX(encoding=3, desc="Website", url=tags.website))
-    if tags.rating:
+    if valid(tags.album_artist): set_tag("TPE2", TPE2(encoding=3, text=tags.album_artist))
+    if valid(tags.bpm): set_tag("TBPM", TBPM(encoding=3, text=tags.bpm))
+    if valid(tags.key): set_tag("TKEY", TKEY(encoding=3, text=tags.key))
+    if valid(tags.isrc): set_tag("TSRC", TSRC(encoding=3, text=tags.isrc))
+    if valid(tags.encoder): set_tag("TSSE", TSSE(encoding=3, text=tags.encoder))
+    if valid(tags.original_date): set_tag("TDOR", TDOR(encoding=3, text=tags.original_date))
+    if valid(tags.copyright): set_tag("TCOP", TCOP(encoding=3, text=tags.copyright))
+    if valid(tags.website): set_tag("WXXX", WXXX(encoding=3, desc="Website", url=tags.website))
+    if valid(tags.rating):
         try:
             rating_val = int(tags.rating)
             set_tag("POPM", POPM(email="user@example.com", rating=rating_val, count=0))
         except ValueError:
             pass
-    if tags.subtitle: set_tag("TIT3", TIT3(encoding=3, text=tags.subtitle))
+    if valid(tags.subtitle): set_tag("TIT3", TIT3(encoding=3, text=tags.subtitle))
 
     # Cover Art
-    if tags.cover_url:
+    if valid(tags.cover_url):
         try:
             resp = requests.get(tags.cover_url, timeout=10)
             resp.raise_for_status()
@@ -152,19 +159,27 @@ class GeminiID3PostProcessor(PostProcessor):
         if not file_path.lower().endswith(".mp3"):
             return [], info  # Only process MP3s
 
-        raw_metadata = info.get("metadata", {})
+        filename = os.path.basename(file_path)
+        uploader = info.get("uploader") or info.get("channel")
+        thumbnail = info.get("thumbnail")
 
         try:
-            tags = chain.invoke({"metadata": raw_metadata})
+            tags = chain.invoke({"filename": filename})
+            # Fallbacks for mandatory fields
             if not tags.title:
-                tags.title = os.path.splitext(os.path.basename(file_path))[0]
+                tags.title = os.path.splitext(filename)[0]
+            if not tags.artist and uploader:
+                tags.artist = uploader
+            if not tags.cover_url and thumbnail:
+                tags.cover_url = thumbnail
 
             tag_mp3(file_path, tags)
             self.to_screen(f"[GeminiID3] Tagged: {os.path.basename(file_path)}")
+
         except Exception as e:
-            # Fallback to minimal tagging if Gemini fails
-            fallback_title = os.path.splitext(os.path.basename(file_path))[0]
-            fallback_tags = MP3Tags(title=fallback_title)
+            # Minimal fallback
+            fallback_title = os.path.splitext(filename)[0]
+            fallback_tags = MP3Tags(title=fallback_title, artist=uploader, cover_url=thumbnail)
             tag_mp3(file_path, fallback_tags)
             self.to_screen(f"[GeminiID3] Fallback tagging applied: {e}")
 
