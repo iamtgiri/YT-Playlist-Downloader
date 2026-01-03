@@ -7,19 +7,20 @@ This project bundles **FFmpeg** internally, so you don’t need to install Pytho
 ---
 
 ## 📦 Project Structure
+
 ```
 
 youtube-downloader-gui/
 ├── app/
 │   ├── __init__.py
+│   ├── yt_dlp_gemini_tagger.py # yt-dlp wrapper with Gemini tagging
 │   └── main.py         # main application code
 ├── requirements.txt     # dependencies for running from source
 ├── README.md            # this file
 ├── LICENSE              # GPL-3.0 License
-├── setup.py             # optional: pip installable
 ├── .gitignore
+├── ffmpeg/              # bundled FFmpeg binaries
 └── assets/
-└── icon.png         # application tray/icon
 
 ```
 
@@ -27,21 +28,10 @@ youtube-downloader-gui/
 
 ## 🚀 How to Use
 
-### Option 1: Run the Prebuilt `.exe` (Recommended for Windows Users)
-1. Download the latest release from **[Releases](https://github.com/iamtgiri/YT-Playlist-Downloader/releases)**.  
-   Example:  
-   [⬇️ Download `YT-Playlist-Downloader.exe`](https://github.com/iamtgiri/YT-Playlist-Downloader/releases/download/v1.0.0/YT-Playlist-Downloader-v1.0.0.exe)  
-2. Double-click the `.exe` to launch the app.  
-3. Paste a YouTube playlist or video link.  
-4. Choose whether to download as **video (MP4)** or **audio (MP3)**.  
-5. The app will download and process automatically using FFmpeg.  
+### Run from Source
 
-⚠️ On first run, Windows SmartScreen might warn because the executable isn’t code-signed. Click **More Info → Run Anyway** to proceed.
-
----
-
-### Option 2: Run from Source (For Developers)
 1. Clone the repository:
+
    ```bash
    git clone https://github.com/iamtgiri/YT-Playlist-Downloader.git
    cd YT-Playlist-Downloader
@@ -53,11 +43,13 @@ youtube-downloader-gui/
    python -m venv venv
    venv\Scripts\activate   # on Windows
    ```
+
 3. Install dependencies:
 
    ```bash
    pip install -r requirements.txt
    ```
+
 4. Run the app:
 
    ```bash
@@ -75,6 +67,7 @@ If you want to generate your own `.exe`:
    ```bash
    pip install pyinstaller
    ```
+
 2. Run:
 
    ```bash
@@ -85,6 +78,7 @@ If you want to generate your own `.exe`:
        --add-data "ffmpeg/ffplay.exe;ffmpeg" \
        app/main.py
    ```
+
 3. Your executable will be in the `dist/` folder.
 
 ---
@@ -101,5 +95,3 @@ You are free to use, modify, and distribute it under the same license terms. See
 * [PyQt5](https://pypi.org/project/PyQt5/) for GUI
 * [yt-dlp](https://github.com/yt-dlp/yt-dlp) for YouTube downloading
 * [FFmpeg](https://ffmpeg.org/) for audio/video processing
-
-

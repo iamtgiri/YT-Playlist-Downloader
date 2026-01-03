@@ -12,3 +12,4 @@ dist/
 YT-Playlist-Downloader.spec
 app/__pycache__/
 temp_files/
+setup.py
