@@ -6,7 +6,7 @@ The application is built on top of `yt-dlp` and bundles **FFmpeg binaries**, all
 
 ---
 
-## ✨ Features
+## Features
 
 - Download full playlists or single videos
 - Simple, responsive desktop UI (PyQt5)
@@ -16,7 +16,7 @@ The application is built on top of `yt-dlp` and bundles **FFmpeg binaries**, all
 
 ---
 
-## 📁 Project Structure
+##  Project Structure
 
 ```
 
@@ -35,7 +35,7 @@ YT-Playlist-Downloader/
 
 ---
 
-## 🚀 Running from Source
+##  Running from Source
 
 ### Prerequisites
 - Python 3.9+
@@ -69,7 +69,7 @@ python -m app.main
 
 ---
 
-## 🛠 Building a Standalone Executable
+##  Building a Standalone Executable
 
 You can generate a self-contained Windows executable using **PyInstaller**.
 
@@ -94,14 +94,14 @@ The generated executable will be available in the `dist/` directory.
 
 ---
 
-## 📄 License
+##  License
 
 This project is licensed under the **GNU General Public License v3.0 (GPL-3.0)**.
 See the [LICENSE](LICENSE) file for details.
 
 ---
 
-## 🙏 Acknowledgements
+##  Acknowledgements
 
 * **PyQt5** — GUI framework
 * **yt-dlp** — YouTube download backend
