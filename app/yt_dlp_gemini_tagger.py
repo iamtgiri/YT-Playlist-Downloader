@@ -58,9 +58,9 @@ class MP3Tags(BaseModel):
 
 # --- Gemini setup ---
 model = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash-lite",
-    temperature=0.5,
-    max_output_tokens=1024,
+    model="gemini-2.5-flash",
+    temperature=0.1,
+    # max_output_tokens=1024,
     google_api_key=google_api_key
 )
 parser = PydanticOutputParser(pydantic_object=MP3Tags)
